@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SchoolSkipped</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 40px;
+      background: #f8f9fa;
+    }
+    h1 { color: #185ADB; margin-bottom: 10px; }
+    .creator { font-size: 1.1em; color: #444; }
+    .panel { background: #fff; box-shadow: 0 4px 12px #ddd; display: inline-block; padding: 24px 36px; border-radius: 12px;}
+    input[type="date"] {
+      font-size: 1.15em;
+      padding: 6px;
+      margin: 8px;
+      border-radius: 5px;
+      border: 1.2px solid #CCC;
+    }
+    button {
+      font-size: 1.15em;
+      background: #185ADB;
+      color: #fff;
+      border: none;
+      padding: 8px 22px;
+      margin: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0a1931; }
+    .result { font-size: 1.2em; margin-top: 20px;}
+    .footer { margin-top: 44px; font-size: 0.96em; color: #777;}
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>SchoolSkipped</h1>
+    <div class="creator">Made by <strong>Arnav Chauhan</strong></div>
+    <p>Enter a date to check if school is likely to be closed due to holiday, event, or weather.</p>
+    <input type="date" id="dateInput">
+    <br>
+    <button onclick="predictHoliday()">Check</button>
+    <div class="result" id="output"></div>
+  </div>
+  <div class="footer">
+    Powered by SchoolSkipped API &mdash; © Arnav Chauhan
+  </div>
+  <script>
+    // Set your backend URL below!
+    const API_URL = "https://schoolskipped.onrender.com/predict?date="; // REPLACE with your deployed backend URL
+
+    function predictHoliday() {
+      const date = document.getElementById('dateInput').value;
+      const out = document.getElementById('output');
+      if (!date) {
+        out.innerText = "Please select a date.";
+        return;
+      }
+      out.innerHTML = "<em>Checking...</em>";
+      fetch(API_URL + date)
+        .then(response => response.json())
+        .then(data => {
+          let result = "";
+          if (data.error) {
+            result = "Error: " + data.error;
+          } else {
+            result += `<strong>${data.greeting}</strong><br>`;
+            if (data.probability >= 80) {
+              result += `<span style='color:#b91c1c'>🏫 Very high chance of school being closed (${data.probability}%)</span><br>`;
+            } else if (data.probability >= 40) {
+              result += `<span style='color:#e09c1b'>⚡ Medium risk (${data.probability}%)</span><br>`;
+            } else if (data.probability >= 20) {
+              result += `<span style='color:#198754'>🌥️ Low/moderate risk (${data.probability}%)</span><br>`;
+            } else {
+              result += `<span style='color:#185adb'>✅ School is likely open (${data.probability}%)</span><br>`;
+            }
+            result += `<b>Weather:</b> ${data.weather.desc}<br>` +
+                      `Temp: ${data.weather.temp}&deg;C | Humidity: ${data.weather.humidity}% | Precipitation: ${data.weather.precip} mm<br>`;
+            if (data.announcement)
+              result += `<b>School notice:</b> ${data.announcement}<br>`;
+            if (data.next_holiday)
+              result += `<b>Next scheduled holiday:</b> ${data.next_holiday.name} on ${data.next_holiday.date}<br>`;
+          }
+          out.innerHTML = result;
+        }).catch(err => {
+          out.innerHTML = "Unable to contact SchoolSkipped server. Try again!";
+        });
+    }
+  </script>
+</body>
+</html>
