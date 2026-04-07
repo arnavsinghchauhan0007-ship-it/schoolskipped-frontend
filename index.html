@@ -1,94 +1,651 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>SchoolSkipped</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 40px;
-      background: #f8f9fa;
-    }
-    h1 { color: #185ADB; margin-bottom: 10px; }
-    .creator { font-size: 1.1em; color: #444; }
-    .panel { background: #fff; box-shadow: 0 4px 12px #ddd; display: inline-block; padding: 24px 36px; border-radius: 12px;}
-    input[type="date"] {
-      font-size: 1.15em;
-      padding: 6px;
-      margin: 8px;
-      border-radius: 5px;
-      border: 1.2px solid #CCC;
-    }
-    button {
-      font-size: 1.15em;
-      background: #185ADB;
-      color: #fff;
-      border: none;
-      padding: 8px 22px;
-      margin: 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover { background: #0a1931; }
-    .result { font-size: 1.2em; margin-top: 20px;}
-    .footer { margin-top: 44px; font-size: 0.96em; color: #777;}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SchoolSkipped — Will School Be Off?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: rgba(255,255,255,0.07);
+    --border-mid: rgba(255,255,255,0.13);
+    --text: #f0eff8;
+    --muted: #8a899e;
+    --accent: #6c63ff;
+    --accent-glow: rgba(108,99,255,0.15);
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 1rem 4rem;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { width: 100%; max-width: 520px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 3.5rem 0 2.5rem;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-glow);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    color: #a09bff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .logo-badge span { width: 6px; height: 6px; border-radius: 50%; background: #6c63ff; animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 6vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.75rem;
+  }
+
+  h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #a09bff 0%, #6c63ff 50%, #4f46e5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  /* DATE PICKER CARD */
+  .picker-card {
+    background: var(--card);
+    border: 1px solid var(--border-mid);
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .picker-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: 50%;
+    transform: translateX(-50%);
+    width: 200px; height: 120px;
+    background: radial-gradient(ellipse, rgba(108,99,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  input[type="date"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    padding: 0.875rem 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    cursor: pointer;
+    color-scheme: dark;
+  }
+
+  input[type="date"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+
+  .btn-predict {
+    width: 100%;
+    margin-top: 1rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.9rem;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s, opacity 0.15s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-predict:hover { opacity: 0.9; box-shadow: 0 6px 24px rgba(108,99,255,0.35); transform: translateY(-1px); }
+  .btn-predict:active { transform: scale(0.98); }
+  .btn-predict:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-predict .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* RESULT SECTION */
+  #result { display: none; }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border-mid);
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* VERDICT */
+  .verdict-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .verdict-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .verdict-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+
+  .badge-low { background: rgba(34,197,94,0.1); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .badge-med { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .badge-high { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .badge-certain { background: rgba(108,99,255,0.1); color: #a09bff; border: 1px solid rgba(108,99,255,0.3); }
+
+  /* PROBABILITY BAR */
+  .prob-wrap { margin-bottom: 1.5rem; }
+  .prob-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .prob-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .prob-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .bar-track {
+    height: 8px;
+    background: var(--surface);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 0%;
+  }
+
+  .bar-low { background: var(--green); }
+  .bar-med { background: var(--amber); }
+  .bar-high { background: var(--red); }
+  .bar-certain { background: var(--accent); }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.25rem 0;
+  }
+
+  /* INFO GRID */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .info-cell {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+  }
+
+  .info-cell .cell-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .info-cell .cell-val {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ALERT BANNER */
+  .alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    font-size: 0.88rem;
+    color: #fca5a5;
+    margin-top: 1rem;
+  }
+
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+  /* HOLIDAY NOTE */
+  .holiday-note {
+    background: var(--accent-glow);
+    border: 1px solid rgba(108,99,255,0.25);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    font-size: 0.88rem;
+    color: #c4c0ff;
+    margin-top: 1rem;
+  }
+
+  /* NEXT HOLIDAY */
+  .next-holiday-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    animation: slideUp 0.5s 0.1s both cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .next-holiday-left .nh-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
+  .next-holiday-left .nh-name { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; }
+  .nh-date-pill {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 10px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  footer strong { color: #a09bff; font-weight: 500; }
+
+  /* ERROR */
+  .err-msg {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #fca5a5;
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  /* QUICK DATE BUTTONS */
+  .quick-dates {
+    display: flex;
+    gap: 8px;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .qd-btn {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .qd-btn:hover { border-color: var(--accent); color: #a09bff; background: var(--accent-glow); }
+</style>
 </head>
 <body>
-  <div class="panel">
-    <h1>SchoolSkipped</h1>
-    <div class="creator">Made by <strong>Arnav Chauhan</strong></div>
-    <p>Enter a date to check if school is likely to be closed due to holiday, event, or weather.</p>
-    <input type="date" id="dateInput">
-    <br>
-    <button onclick="predictHoliday()">Check</button>
-    <div class="result" id="output"></div>
-  </div>
-  <div class="footer">
-    Powered by SchoolSkipped API &mdash; © Arnav Chauhan
-  </div>
-  <script>
-    // Set your backend URL below!
-    const API_URL = "https://schoolskipped.onrender.com/predict?date="; // REPLACE with your deployed backend URL
 
-    function predictHoliday() {
-      const date = document.getElementById('dateInput').value;
-      const out = document.getElementById('output');
-      if (!date) {
-        out.innerText = "Please select a date.";
-        return;
-      }
-      out.innerHTML = "<em>Checking...</em>";
-      fetch(API_URL + date)
-        .then(response => response.json())
-        .then(data => {
-          let result = "";
-          if (data.error) {
-            result = "Error: " + data.error;
-          } else {
-            result += `<strong>${data.greeting}</strong><br>`;
-            if (data.probability >= 80) {
-              result += `<span style='color:#b91c1c'>🏫 Very high chance of school being closed (${data.probability}%)</span><br>`;
-            } else if (data.probability >= 40) {
-              result += `<span style='color:#e09c1b'>⚡ Medium risk (${data.probability}%)</span><br>`;
-            } else if (data.probability >= 20) {
-              result += `<span style='color:#198754'>🌥️ Low/moderate risk (${data.probability}%)</span><br>`;
-            } else {
-              result += `<span style='color:#185adb'>✅ School is likely open (${data.probability}%)</span><br>`;
-            }
-            result += `<b>Weather:</b> ${data.weather.desc}<br>` +
-                      `Temp: ${data.weather.temp}&deg;C | Humidity: ${data.weather.humidity}% | Precipitation: ${data.weather.precip} mm<br>`;
-            if (data.announcement)
-              result += `<b>School notice:</b> ${data.announcement}<br>`;
-            if (data.next_holiday)
-              result += `<b>Next scheduled holiday:</b> ${data.next_holiday.name} on ${data.next_holiday.date}<br>`;
-          }
-          out.innerHTML = result;
-        }).catch(err => {
-          out.innerHTML = "Unable to contact SchoolSkipped server. Try again!";
-        });
+<div class="container">
+  <header>
+    <div class="logo-badge"><span></span> AI Prediction Engine</div>
+    <h1>Will school<br>be <em>skipped?</em></h1>
+    <p class="subtitle">Weather · holidays · govt alerts — all in one prediction for The Asian School, Dehradun.</p>
+  </header>
+
+  <div class="picker-card">
+    <label for="date-input">Select a date</label>
+    <input type="date" id="date-input">
+
+    <div class="quick-dates">
+      <button class="qd-btn" onclick="setRelativeDate(0)">Today</button>
+      <button class="qd-btn" onclick="setRelativeDate(1)">Tomorrow</button>
+      <button class="qd-btn" onclick="setRelativeDate(7)">Next week</button>
+    </div>
+
+    <button class="btn-predict" id="predict-btn" onclick="runPredict()">
+      <span id="btn-text">Check My Date</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+  </div>
+
+  <div class="err-msg" id="err-msg"></div>
+
+  <div id="result">
+    <div class="result-card" id="main-card">
+      <div class="verdict-row">
+        <div class="verdict-text" id="verdict-text"></div>
+        <div class="verdict-badge" id="verdict-badge"></div>
+      </div>
+
+      <div class="prob-wrap">
+        <div class="prob-label-row">
+          <span class="prob-label">Holiday probability</span>
+          <span class="prob-num" id="prob-num">0%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-grid" id="info-grid">
+        <!-- filled dynamically -->
+      </div>
+
+      <div id="alert-section"></div>
+      <div id="holiday-name-section"></div>
+    </div>
+
+    <div class="next-holiday-card" id="next-holiday-card" style="display:none;">
+      <div class="next-holiday-left">
+        <div class="nh-label">Next holiday</div>
+        <div class="nh-name" id="nh-name"></div>
+      </div>
+      <div class="nh-date-pill" id="nh-date"></div>
+    </div>
+  </div>
+
+  <footer>Built by <strong>Arnav Chauhan</strong> &nbsp;·&nbsp; SchoolSkipped v2.0</footer>
+</div>
+
+<script>
+  const API = "http://localhost:5000";
+
+  function todayStr() {
+    const d = new Date();
+    return d.toISOString().split("T")[0];
+  }
+
+  function setRelativeDate(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    document.getElementById("date-input").value = d.toISOString().split("T")[0];
+  }
+
+  document.getElementById("date-input").value = todayStr();
+
+  function fmtDate(str) {
+    const d = new Date(str + "T00:00:00");
+    return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+
+  function fmtDateShort(str) {
+    const d = new Date(str + "T00:00:00");
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  }
+
+  function capitalize(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+  }
+
+  function setLoading(on) {
+    document.getElementById("spinner").style.display = on ? "block" : "none";
+    document.getElementById("btn-text").style.display = on ? "none" : "block";
+    document.getElementById("predict-btn").disabled = on;
+  }
+
+  function showErr(msg) {
+    const el = document.getElementById("err-msg");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function hideErr() {
+    document.getElementById("err-msg").style.display = "none";
+  }
+
+  function getBarClass(p) {
+    if (p >= 85) return "bar-certain";
+    if (p >= 50) return "bar-high";
+    if (p >= 20) return "bar-med";
+    return "bar-low";
+  }
+
+  function getBadgeClass(p) {
+    if (p >= 85) return "badge-certain";
+    if (p >= 50) return "badge-high";
+    if (p >= 20) return "badge-med";
+    return "badge-low";
+  }
+
+  function getVerdict(p) {
+    if (p >= 85) return "Almost definitely off 🎉";
+    if (p >= 50) return "Probably off 😮";
+    if (p >= 20) return "Maybe off 🤔";
+    return "School's on, buddy 😔";
+  }
+
+  function getBadgeText(p) {
+    if (p >= 85) return "Very Likely";
+    if (p >= 50) return "Likely";
+    if (p >= 20) return "Possible";
+    return "Unlikely";
+  }
+
+  async function runPredict() {
+    const date = document.getElementById("date-input").value;
+    if (!date) { showErr("Please pick a date first!"); return; }
+    hideErr();
+    setLoading(true);
+    document.getElementById("result").style.display = "none";
+
+    try {
+      const res = await fetch(`${API}/predict?date=${date}`);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      renderResult(data);
+    } catch (e) {
+      showErr("Could not reach the prediction server. Make sure the backend (app.py) is running on port 5000.");
+    } finally {
+      setLoading(false);
     }
-  </script>
+  }
+
+  function renderResult(data) {
+    const p = data.probability;
+    const w = data.weather;
+
+    document.getElementById("verdict-text").textContent = getVerdict(p);
+
+    const badge = document.getElementById("verdict-badge");
+    badge.textContent = getBadgeText(p);
+    badge.className = "verdict-badge " + getBadgeClass(p);
+
+    const probNum = document.getElementById("prob-num");
+    probNum.textContent = p + "%";
+    const fill = document.getElementById("bar-fill");
+    fill.className = "bar-fill " + getBarClass(p);
+    setTimeout(() => { fill.style.width = p + "%"; }, 50);
+
+    // Weather grid
+    const grid = document.getElementById("info-grid");
+    grid.innerHTML = `
+      <div class="info-cell">
+        <div class="cell-label">Temperature</div>
+        <div class="cell-val">${w.temp !== "N/A" ? w.temp + "°C" : "N/A"} (feels ${w.feels !== "N/A" ? w.feels + "°C" : "N/A"})</div>
+      </div>
+      <div class="info-cell">
+        <div class="cell-label">Conditions</div>
+        <div class="cell-val">${capitalize(w.desc)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="cell-label">Humidity</div>
+        <div class="cell-val">${w.humidity !== "N/A" ? w.humidity + "%" : "N/A"}</div>
+      </div>
+      <div class="info-cell">
+        <div class="cell-label">Precipitation</div>
+        <div class="cell-val">${w.precip || 0} mm</div>
+      </div>
+    `;
+
+    // Govt alerts
+    const alertSec = document.getElementById("alert-section");
+    alertSec.innerHTML = "";
+    if (data.govt_alerts && data.govt_alerts.length > 0) {
+      alertSec.innerHTML = `
+        <div class="alert-banner">
+          <div class="alert-dot"></div>
+          <span>Govt alert active: <strong>${data.govt_alerts.join(", ")}</strong></span>
+        </div>`;
+    }
+
+    // Holiday name banner
+    const holSec = document.getElementById("holiday-name-section");
+    holSec.innerHTML = "";
+    if (p === 100 && data.next_holiday && data.next_holiday.date === data.date) {
+      holSec.innerHTML = `
+        <div class="holiday-note">
+          🗓️ <strong>${data.next_holiday.name}</strong> — this is a confirmed holiday!
+        </div>`;
+    }
+
+    // Next holiday card
+    const nhCard = document.getElementById("next-holiday-card");
+    if (data.next_holiday) {
+      document.getElementById("nh-name").textContent = data.next_holiday.name;
+      document.getElementById("nh-date").textContent = fmtDateShort(data.next_holiday.date);
+      nhCard.style.display = "flex";
+    } else {
+      nhCard.style.display = "none";
+    }
+
+    document.getElementById("result").style.display = "block";
+    document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // Allow pressing Enter
+  document.getElementById("date-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") runPredict();
+  });
+</script>
 </body>
 </html>
